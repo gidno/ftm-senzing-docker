@@ -17,21 +17,16 @@ RUN rm -rf ./senzingapi/
 
 RUN apt update && apt install -y wget apt-utils
 
-#RUN wget https://senzing-production-apt.s3.amazonaws.com/senzingrepo_1.0.0-1_amd64.deb
+RUN wget https://senzing-production-apt.s3.amazonaws.com/senzingrepo_1.0.0-1_amd64.deb
 
 RUN apt install -y apt-transport-https ca-certificates postgresql-client libpq-dev curl jq\
     python3-pip python3-icu python3-psycopg2 \
     python3-lxml python3-crypto gnupg2
-#RUN apt install -y ./senzingrepo_1.0.0-1_amd64.deb
-#RUN apt update
-#RUN apt -y install senzingapi
-RUN tar xzf ./senzingapi.tar.gz
-RUN apt install -y ./senzingapi/*.deb
+RUN apt install -y ./senzingrepo_1.0.0-1_amd64.deb
+RUN apt update
+RUN apt -y install senzingapi
 
 RUN pip3 install --no-cache-dir -q -r ./requirements.txt
 
-RUN ls -al /opt/senzing/g2
 RUN mkdir -p /etc/opt/senzing
 RUN cp -R /opt/senzing/g2/resources/templates/* /etc/opt/senzing/
-
-#ENTRYPOINT [ "/bin/bash", "-c", "./cli/entrypoint.sh" ]
