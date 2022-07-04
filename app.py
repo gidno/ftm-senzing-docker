@@ -1,8 +1,12 @@
 from flask import Flask, request
+from datetime import datetime
+import json
+import time
 
-from libs.utils import get_logger
+from libs.utils import get_logger, get_q_manager
 from libs.senzing_libs.senzing_sourcer import SenzingSourcer
 from libs.senzing_libs.senzing_mapping import SenzingMapper
+from libs.conf import RABBIT_Q, RABBIT_Q_ERROR
 
 logger = get_logger()
 app = Flask(__name__)
@@ -42,8 +46,46 @@ def upload_file():
             mapper.run()
         except Exception as e:
             return {'Error': repr(e)}
+    else:
+        try:
+            start_time = datetime.now()
+            q_manager = get_q_manager(RABBIT_Q, RABBIT_Q_ERROR)
 
-    return 'OK'
+            logger.info(f'Processing file: {file}')
+            logger.info(f'Data Source: {datasource}')
+            total = 0
+            for line in file:
+                line = line.strip()
+                data = json.loads(line)
+                i = 5
+                err = None
+                while i > 0:
+                    try:
+                        q_manager.basic_publish(
+                            exchange='',
+                            routing_key=RABBIT_Q,
+                            body=json.dumps(data))
+                        total += 1
+                        break
+                    except Exception as e:
+                        err = e
+                        time.sleep(i * 5)
+                        i -= 1
+                else:
+                    logger.error(f'Error send message to Rabbit: {err}')
+                    q_manager.basic_publish(
+                        exchange='',
+                        routing_key=RABBIT_Q_ERROR,
+                        body={'task': json.dumps(data), 'error': err})
+
+            logger.info(f'{total} records processed! Time spent: '
+                        f'{datetime.now() - start_time}')
+            return {'Status': 'OK'}
+        except Exception as e:
+            logger.exception(f'ERROR: {e}')
+            return {'Error': repr(e)}
+
+    return {'Status': 'OK'}
 
 
 if __name__ == '__main__':
