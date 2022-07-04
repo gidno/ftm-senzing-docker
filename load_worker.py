@@ -3,13 +3,13 @@ import json
 import asyncio
 from asyncio import Event
 import signal
+import aio_pika
 
 from libs.utils import get_logger
 from libs.slack import send_alert
 from libs.conf import (RABBIT_Q, RABBIT_Q_ERROR, RABBIT_PASS, RABBIT_USER,
                        RABBIT_URL)
 from libs.senzing_libs.senzing_init import SenzingInit
-from libs.async_manager import AIOQueueManager
 
 
 class Worker(SenzingInit):
@@ -30,7 +30,18 @@ class Worker(SenzingInit):
             'queue_pass': RABBIT_PASS
         }
 
-    def requeue_task(self, q_manager, task, err, q, q_err):
+    async def publish(self, task, q):
+        connection = await aio_pika.connect_robust(
+            f"amqp://{RABBIT_USER}:{RABBIT_PASS}@{RABBIT_URL}/",
+        )
+        async with connection:
+            channel = await connection.channel()
+            await channel.default_exchange.publish(
+                aio_pika.Message(body=json.dumps(task).encode()),
+                routing_key=q
+            )
+
+    async def requeue_task(self, task, err):
         time.sleep(10)
         if not task:
             return
@@ -39,19 +50,14 @@ class Worker(SenzingInit):
         else:
             task['tries'] = 1
 
-        task['error'] = err
+        task['error'] = repr(err)
 
-        body = json.dumps(task)
         if task['tries'] < 5:
             self.log.debug('Requeue task after failed')
-            q_manager.basic_publish(exchange='',
-                                    routing_key=q,
-                                    body=body)
+            await self.publish(task, self.q)
         else:
             self.log.warning('All tries failed. Sent task to error queue.')
-            q_manager.basic_publish(exchange='',
-                                    routing_key=q_err,
-                                    body=body)
+            await self.publish(task, self.q_err)
             self.log.warning('All tries failed. Removed temp dir.')
             send_alert(f'{self.__class__.__name__} Error!',
                        f'Error: {err}', 'E')
@@ -87,22 +93,31 @@ class Worker(SenzingInit):
                 self.log.error(err)
 
     async def work(self):
-        queue_manager = AIOQueueManager(self.loop, self.config,
-                                        ex_ev=self.ex_ev)
-        while not self.ex_ev.is_set():
-            async for message in queue_manager.internal_consume_generator(
-                    self.q):
-                if not message:
-                    await asyncio.sleep(1)
-                    continue
-                try:
-                    await self.process(message.body)
-                    await message.ack()
-                except Exception as e:
-                    self.log.exception(e)
-                    self.requeue_task(
-                        queue_manager, json.loads(message.body), e,
-                        self.q, self.q_err)
+
+        connection = await aio_pika.connect_robust(
+            f"amqp://{RABBIT_USER}:{RABBIT_PASS}@{RABBIT_URL}/",
+        )
+
+        async with connection:
+            # Creating channel
+            channel = await connection.channel()
+            # Will take no more than 10 messages in advance
+            await channel.set_qos(prefetch_count=100)
+
+            # Declaring queue
+            queue = await channel.declare_queue(self.q, auto_delete=False,
+                                                durable=True)
+
+            async with queue.iterator() as queue_iter:
+                async for message in queue_iter:
+                    if self.ex_ev.is_set():
+                        return
+                    try:
+                        await self.process(message.body)
+                        await message.ack()
+                    except Exception as e:
+                        self.log.exception(e)
+                        await self.requeue_task(json.loads(message.body), e)
 
         if self.ex_ev.is_set():
             self.log.info('Stopping daemons.')

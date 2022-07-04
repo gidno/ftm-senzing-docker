@@ -16,8 +16,6 @@ services:
     ports:
       - "5432:5432"
     command: postgres -c synchronous_commit=off -c wal_writer_delay=1000 -c max_connections=5000
-    env_file:
-      - conf/senzing.dev.env
     logging:
       options:
         max-size: 10m
@@ -34,8 +32,6 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
     logging:
       driver: none
-    env_file:
-      - conf/senzing.dev.env
 
   api:
     build:
@@ -49,9 +45,6 @@ services:
     restart: on-failure
     depends_on:
       - db
-    env_file:
-      - conf/senzing.dev.env
-
 
   loader:
     build:
@@ -60,12 +53,11 @@ services:
     depends_on:
       - rabbitmq3
       - db
+    deploy:
+      replicas: 4
     volumes:
       - ./:/senzing
       - "/etc/localtime:/etc/localtime:ro"
-    env_file:
-      - conf/senzing.dev.env
-
 
   redo:
     build:
@@ -73,11 +65,11 @@ services:
     command: python3 -u redo_worker.py
     depends_on:
       - db
+    deploy:
+      replicas: 4
     volumes:
       - ./:/senzing
       - "/etc/localtime:/etc/localtime:ro"
-    env_file:
-      - conf/senzing.dev.env
 
 volumes:
   postgres-data: {}

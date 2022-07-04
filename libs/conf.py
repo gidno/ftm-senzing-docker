@@ -1,5 +1,3 @@
-import os
-
 # lists of entity types used in mapper
 # "Asset" - not used for now
 THING_ENTITY_LIST = ["Person", "Organization", "Company",
@@ -25,6 +23,6 @@ RABBIT_Q = 'load_senzing_q'
 RABBIT_Q_ERROR = 'load_senzing_q_err'
 SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
 
-INIT_JSON = os.getenv('INIT_JSON')
-CONFIG_JSON = os.getenv('CONFIG_JSON')
+INIT_JSON = '/senzing/conf/senzing_init_settings.json'
+CONFIG_JSON = '/senzing/conf/senzing_ftm_config.json'
 FORCE_LOAD_CONFIG = False

@@ -78,23 +78,15 @@ class SenzingInit:
     def _init_senzing(self):
         try:
             # paths
-            data_dir = os.environ.get("SUPPORTPATH",
-                                      self.settings['SENZING_DATA_DIR'])
-            config_path = os.environ.get("CONFIGPATH",
-                                         self.settings['SENZING_ETC_DIR'])
-            g2_dir = os.environ.get("SENZING_ROOT",
-                                    self.settings['SENZING_G2_DIR'])
-            lic_path = os.environ.get("LICENSEFILE",
-                                      self.settings['LICENSEFILE'])
-
+            data_dir = self.settings['SENZING_DATA_DIR']
+            config_path = self.settings['SENZING_ETC_DIR']
+            g2_dir = self.settings['SENZING_G2_DIR']
+            lic_path = self.settings['LICENSEFILE']
             # create senzing config
             support_path = os.environ.get("SENZING_DATA_VERSION_DIR", data_dir)
-            resource_path = os.environ.get('RESOURCEPATH', "{0}/resources".format(g2_dir))
-
-            sql_connection = os.environ.get(
-                "CONNECTION",
-                self.settings['SENZING_SQL_CONNECTION'])
-
+            resource_path = os.environ.get(
+                'RESOURCEPATH', "{0}/resources".format(g2_dir))
+            sql_connection = self.settings['SENZING_SQL_CONNECTION']
             senzing_config_dictionary = {
                 "PIPELINE": {
                     "CONFIGPATH": config_path,
