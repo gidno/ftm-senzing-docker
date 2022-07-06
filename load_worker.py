@@ -17,18 +17,8 @@ class Worker(SenzingInit):
     def __init__(self, ex_ev):
         self.ex_ev = ex_ev
         self.log = get_logger()
-        self.q = RABBIT_Q
-        self.q_err = RABBIT_Q_ERROR
         super(Worker, self).__init__(self.log)
-        self.threads = 5
         self.loop = asyncio.get_event_loop()
-        self.config = {
-            'queue_host': RABBIT_URL,
-            'queue_port': 5672,
-            'queue_vhost': '/',
-            'queue_user': RABBIT_USER,
-            'queue_pass': RABBIT_PASS
-        }
 
     async def publish(self, task, q):
         connection = await aio_pika.connect_robust(
@@ -54,10 +44,10 @@ class Worker(SenzingInit):
 
         if task['tries'] < 5:
             self.log.debug('Requeue task after failed')
-            await self.publish(task, self.q)
+            await self.publish(task, RABBIT_Q)
         else:
             self.log.warning('All tries failed. Sent task to error queue.')
-            await self.publish(task, self.q_err)
+            await self.publish(task, RABBIT_Q_ERROR)
             self.log.warning('All tries failed. Removed temp dir.')
             send_alert(f'{self.__class__.__name__} Error!',
                        f'Error: {err}', 'E')
@@ -101,7 +91,7 @@ class Worker(SenzingInit):
         async with connection:
             channel = await connection.channel()
             await channel.set_qos(prefetch_count=100)
-            queue = await channel.declare_queue(self.q, auto_delete=False,
+            queue = await channel.declare_queue(RABBIT_Q, auto_delete=False,
                                                 durable=True)
 
             async with queue.iterator() as queue_iter:
