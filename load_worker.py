@@ -42,7 +42,7 @@ class Worker(SenzingInit):
             )
 
     async def requeue_task(self, task, err):
-        time.sleep(10)
+        await asyncio.sleep(10)
         if not task:
             return
         if 'tries' in task:
