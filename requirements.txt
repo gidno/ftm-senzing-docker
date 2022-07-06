@@ -1,0 +1,7 @@
+followthemoney==2.9.5
+senzing==3.0.1
+Flask==2.0.1
+requests >= 2.24.0
+pika==1.2.1
+aio-pika==8.0.3
+gunicorn[eventlet]==20.1.0
