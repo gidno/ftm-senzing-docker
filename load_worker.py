@@ -99,12 +99,8 @@ class Worker(SenzingInit):
         )
 
         async with connection:
-            # Creating channel
             channel = await connection.channel()
-            # Will take no more than 10 messages in advance
             await channel.set_qos(prefetch_count=100)
-
-            # Declaring queue
             queue = await channel.declare_queue(self.q, auto_delete=False,
                                                 durable=True)
 
