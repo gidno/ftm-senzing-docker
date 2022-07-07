@@ -1,4 +1,5 @@
 import asyncio
+import time
 from threading import Event
 import signal
 
@@ -52,6 +53,7 @@ class Worker(SenzingInit):
 
 
 if __name__ == '__main__':
+    time.sleep(10)
     exit_event = Event()
     app = Worker(exit_event)
 
