@@ -1,7 +1,7 @@
 {
   "module_name": "pyG2",
   "SENZING_G2_DIR": "/opt/senzing/g2",
-  "SENZING_DATA_DIR": "/opt/senzing/data/3.0.0",
+  "SENZING_DATA_DIR": "/opt/senzing/data",
   "SENZING_ETC_DIR": "/etc/opt/senzing",
   "LICENSEFILE": "/senzing/lic/g2.lic",
   "SENZING_SQL_CONNECTION": "postgresql://senzing:senzing@db:5432:g2"
